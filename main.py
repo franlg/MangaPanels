@@ -6,6 +6,8 @@ import cv2
 from imutils import contours
 from PIL import Image, ImageOps
 
+#TEST
+
 scraper = cfscrape.create_scraper()
 html_page = scraper.get('https://onepiecechapters.com/chapters/268/one-piece-chapter-1033')
 
@@ -71,6 +73,5 @@ for image in images:
                 cv2.imwrite(f"pagina{n}_panel{i}.png", cropped)
 
         # cv2.drawContours(image, contours, -1, (0, 255, 0), 3)
-
 
     n = n + 1
