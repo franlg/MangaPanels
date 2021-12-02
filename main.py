@@ -36,7 +36,7 @@ def process_image(image):
 
     # Probar si añadiendo el borde va mejor o no
     # De momento parece que no
-    border = 10
+    # border = 10
     # bordered = cv2.copyMakeBorder(image, border, border, border, border, cv2.BORDER_CONSTANT)
 
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
