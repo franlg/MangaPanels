@@ -7,8 +7,31 @@ from imutils import contours
 from PIL import Image, ImageOps
 import os
 import time
+import flask
 
 # TEST
+
+
+def main():
+    web_url = 'https://onepiecechapters.com/chapters/268/one-piece-chapter-1033'
+    file_name = web_url.split("/")[-1]
+    images = scrape_web_for_images(web_url)
+    n = 0
+    for image_data in images:
+        # skip cover and ad
+        if n == 0 or n == 1:
+            n = n + 1
+            continue
+        path = f'images/{file_name}-page-{n}'
+        extension = '.png'
+        save_image_on_path(image_data, path + extension)
+        image = cv2.imread(path + extension)
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        blur = cv2.GaussianBlur(gray, (5, 5), 0)
+        contours = get_panels_contours(blur)
+        contours = sorted(contours, key=cv2.contourArea, reverse=True)
+        save_contour_from_image_on_path(contours, gray, path)
+        n = n + 1
 
 
 def scrape_web_for_images(web_url):
@@ -32,70 +55,29 @@ def show_image(image):
     cv2.destroyAllWindows()
 
 
-def process_image(image):
+def get_panels_contours(image):
+    _, binary = cv2.threshold(image, 0, 255, cv2.THRESH_BINARY_INV)
+    contours,_ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+    draw_convex_hull_contours_on_image(contours, image)
+    _, binary = cv2.threshold(image, 200, 255, cv2.THRESH_BINARY_INV)
+    contours,_ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+    return contours
 
-    # Probar si añadiendo el borde va mejor o no
-    # De momento parece que no
-    # border = 10
-    # bordered = cv2.copyMakeBorder(image, border, border, border, border, cv2.BORDER_CONSTANT)
 
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    blur = cv2.GaussianBlur(gray, (5, 5), 0)
-
-    # ret, binary = cv2.threshold(blur, 127, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-    ret, binary = cv2.threshold(blur, 0, 255, cv2.THRESH_BINARY_INV)
-    # binary = cv2.erode(binary, kernel, iterations=2)
-    contours, hierarchy = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-
+def draw_convex_hull_contours_on_image(contours, image):
     for contour in contours:
         hull = cv2.convexHull(contour)
-        cv2.drawContours(gray, [hull], -1, 0, -1)
+        cv2.drawContours(image, [hull], -1, 0, -1)
 
 
-    ret, binary = cv2.threshold(gray, 200, 255, cv2.THRESH_BINARY_INV)
-    contours, heirarchy = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-
-    for contour in contours:
-        cv2.drawContours(gray, [contour], -1, (0, 255, 0), 3)
-
-    contours = sorted(contours, key=cv2.contourArea, reverse=True)
-    crop_contours_from_image(image, contours)
-
-
-def crop_contours_from_image(image, contours):
-
+def save_contour_from_image_on_path(contours, image, path):
     for i, c in enumerate(contours):
         rect = cv2.boundingRect(c)
         x, y, w, h = rect
         if w > 150 and h > 150:
             cropped = image[y: y + h, x: x + w]
-            cv2.imwrite(f"images/pagina{n}_panel{i}.png", cropped)
-        # if cv2.contourArea(contours[i]) > 20000:
-        #     rect = cv2.boundingRect(c)
-        #     x, y, w, h = rect
-        #     cropped = image[y: y + h, x: x + w]
-        #     cv2.imwrite(f"images/pagina{n}_panel{i}.png", cropped)
+            cv2.imwrite(f"{path}-panel-{i}.png", cropped)
 
 
 if __name__ == '__main__':
-
-    web_url = 'https://onepiecechapters.com/chapters/268/one-piece-chapter-1033'
-    file_name = web_url.split("/")[-1]
-    images = scrape_web_for_images(web_url)
-    n = 0
-    kernel = np.ones((5, 5), np.float32) / 25
-
-    for image in images:
-
-        # skip cover and ad
-        if n == 0 or n == 1:
-            n = n + 1
-            continue
-
-        path = f'images/{file_name}-page-{n}.png'
-        save_image_on_path(image, path)
-        image = cv2.imread(path)
-        process_image(image)
-
-        n = n + 1
+    main()
